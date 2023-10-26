@@ -1,66 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>M183 Starter</title>
-    <link rel="stylesheet" href="/styles.css" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/scripts/index.js"></script>
-  </head>
-  <body
-    class="flex flex-col items-center w-screen h-screen gap-3 text-white bg-slate-800"
-  >
-    <header class="flex flex-col items-center flex-shrink-0 gap-4 pt-3">
-      <img src="/img/logo.png" class="w-48 h-48 rounded-full" />
-      <h1 class="text-2xl font-bold">🚀 M183 - Starter 🚀</h1>
-      <button
-        id="logout"
-        class="px-4 py-2 bg-red-500 rounded hover:bg-red-400"
-      >
-        Logout
-      </button>
-    </header>
-    <main class="flex flex-col w-full max-w-md gap-2 overflow-y-auto grow">
-      <div class="flex flex-col gap-2 grow">
-        <div id="feed" class="flex flex-col w-full gap-2">
-          <div class="flex flex-col w-full gap-2">
-            <input
-            id="username"
-            placeholder="Username"
-            type="email"
-            required
-            class="w-full p-2 px-4 placeholder-gray-200 rounded bg-slate-400 grow"
-          />
-          <input
-            id="password"
-            placeholder="Password"
-            type="password"
-            required
-            class="w-full p-2 px-4 placeholder-gray-200 rounded bg-slate-400 grow"
-          />
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                id="login"
-                class="px-4 py-2 bg-green-500 rounded hover:bg-green-400"
-              >
-                Login
-              </button>
-              <button
-                id="bruteForce"
-                class="px-4 py-2 bg-red-500 rounded hover:bg-red-400"
-              >
-  
-                💀 BruteForce 💀
-              </button>
-            </div>
-            <span id="result" class="text-green-500"></span>
-          </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>M183 Starter</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/scripts/index.js" defer></script>
+</head>
+<body class="flex flex-col items-center w-screen h-screen gap-3 text-white bg-slate-800">
+  <header class="flex flex-col items-center flex-shrink-0 gap-4 pt-3">
+    <img src="/img/logo.png" class="w-48 h-48 rounded-full" />
+    <h1 class="text-2xl font-bold">🚀 M183 - Starter 🚀</h1>
+    <button id="logout" class="px-4 py-2 bg-red-500 rounded hover:bg-red-400 hidden">
+      Logout
+    </button>
+  </header>
+  <main class="flex flex-col w-full max-w-4xl gap-2 overflow-y-auto grow">
+    <div class="flex flex-row gap-2 grow">
+      <div id="feed" class="flex flex-col w-1/2 gap-2">
       </div>
-    </main>
-    <footer class="flex items-center justify-center flex-shrink-0 h-14">
-      <p>Made with ❤️ and a lot of ☕️ by SwitzerChees</p>
-    </footer>
-  </body>
+      <div class="flex flex-col w-1/2 gap-2">
+        <div id="postCreation" class="flex flex-col gap-2 hidden">
+          <input id="postTitle" placeholder="Title" type="text" required class="w-full p-2 px-4 placeholder-gray-200 rounded bg-slate-400 grow" />
+          <textarea id="postContent" placeholder="Content" rows="4" required class="w-full p-2 px-4 placeholder-gray-200 rounded bg-slate-400 grow"></textarea>
+          <button id="createPost" class="px-4 py-2 bg-blue-500 rounded hover:bg-blue-400">
+            Create Post
+          </button>
+        </div>
+
+        <div id="loginForm" class="flex flex-col gap-2">
+          <input id="username" placeholder="Username" type="email" required class="w-full p-2 px-4 placeholder-gray-200 rounded bg-slate-400 grow" />
+          <input id="password" placeholder="Password" type="password" required class="w-full p-2 px-4 placeholder-gray-200 rounded bg-slate-400 grow" />
+          <div class="grid grid-cols-2 gap-2">
+            <button id="login" class="px-4 py-2 bg-green-500 rounded hover:bg-green-400">
+              Login
+            </button>
+            <button id="bruteForce" class="px-4 py-2 bg-red-500 rounded hover:bg-red-400">
+              💀 BruteForce 💀
+            </button>
+          </div>
+          <span id="result" class="text-green-500"></span>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer class="flex items-center justify-center flex-shrink-0 h-14">
+    <p>Made with ❤️ and a lot of ☕️ by SwitzerChees</p>
+  </footer>
+
+  <script>
+    document.getElementById('login').addEventListener('click', async function () {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      try {
+        document.getElementById('postCreation').classList.remove('hidden');
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('logout').classList.remove('hidden');;
+      } catch (error) {
+        console.error('Login fehlgeschlagen:', error);
+      }
+    });
+
+    document.getElementById('logout').addEventListener('click', function () {
+      document.getElementById('postCreation').classList.add('hidden');
+      document.getElementById('loginForm').classList.remove('hidden');
+      document.getElementById('logout').classList.add('hidden');
+      // localStorage.removeItem('token');
+    });
+
+    document.getElementById('createPost').addEventListener('click', async function () {
+      const title = document.getElementById('postTitle').value;
+      const content = document.getElementById('postContent').value;
+      const token = localStorage.getItem('token');
+      try {
+        const response = await fetch('/api/posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ title, content })
+        });
+        if (response.ok) {
+          alert('Post created successfully!');
+        } else {
+          alert('Failed to create post!');
+        }
+      } catch (error) {
+        console.error('Error creating post:', error);
+      }
+    });
+
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      document.getElementById('postCreation').classList.remove('hidden');
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('logout').classList.remove('hidden');
+    }
+  </script>
+</body>
 </html>

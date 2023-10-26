@@ -25,11 +25,17 @@ const initializeAPI = async (app) => {
     login
   );
 
+  app.post(
+    "/api/posts",
+    body("title").notEmpty().withMessage("Title is required."),
+    body("content").notEmpty().withMessage("Content is required."),
+    createPost
+  );
+
   app.get("/api/posts", getPosts);
 };
 
 const login = async (req, res) => {
-  // Validate request
   const result = validationResult(req);
   if (!result.isEmpty()) {
     const formattedErrors = [];
@@ -39,28 +45,19 @@ const login = async (req, res) => {
     return res.status(400).json(formattedErrors);
   }
 
-  // Check if user exists
   const { username, password } = req.body;
-  const getUserQuery = `
-    SELECT * FROM users WHERE username = '${username}';
-  `;
+  const getUserQuery = `SELECT * FROM users WHERE username = '${username}';`;
   const user = await queryDB(db, getUserQuery);
   if (user.length === 0) {
-    return res
-      .status(401)
-      .json({ username: "Username does not exist. Or Passwort is incorrect." });
+    return res.status(401).json({ username: "Username does not exist. Or Password is incorrect." });
   }
-  
-  // Check if password is correct
+
   const hash = user[0].password;
   const match = await bcrypt.compare(password, hash);
   if (!match) {
-    return res
-      .status(401)
-      .json({ username: "Username does not exist. Or Passwort is incorrect." });
+    return res.status(401).json({ username: "Username does not exist. Or Password is incorrect." });
   }
 
-  // Create JWT
   const token = jwt.sign(
     {
       exp: Math.floor(Date.now() / 1000) + 60 * 60,
@@ -72,10 +69,26 @@ const login = async (req, res) => {
   return res.send(token);
 };
 
+const createPost = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { title, content } = req.body;
+  const insertPostQuery = `INSERT INTO posts (title, content) VALUES (?, ?)`;
+
+  try {
+    await insertDB(db, insertPostQuery, [title, content]);
+    res.status(201).json({ message: 'Post created successfully' });
+  } catch (error) {
+    console.error('Error creating post:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 const getPostsFromDB = async () => {
-  const getPostsQuery = `
-    SELECT * FROM posts;
-  `;
+  const getPostsQuery = `SELECT * FROM posts;`;
   try {
     const posts = await queryDB(db, getPostsQuery);
     console.log("Posts from DB:", posts);

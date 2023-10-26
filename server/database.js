@@ -34,18 +34,18 @@ const initializeDatabase = () => {
   return db;
 };
 
-const insertDB = (db, query) => {
+const insertDB = (db, query, params) => {
   return new Promise((resolve, reject) => {
-    db.run(query, [], (err, rows) => {
+    db.run(query, params, function (err) {
       if (err) return reject(err);
-      resolve(rows);
+      resolve(this.lastID);
     });
   });
 };
 
-const queryDB = (db, query) => {
+const queryDB = (db, query, params) => {
   return new Promise((resolve, reject) => {
-    db.all(query, [], (err, rows) => {
+    db.all(query, params, (err, rows) => {
       if (err) return reject(err);
       resolve(rows);
     });

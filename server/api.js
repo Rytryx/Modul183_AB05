@@ -1,35 +1,16 @@
+const express = require("express");
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
-const { initializeDatabase, queryDB } = require("./database");
+const { initializeDatabase, queryDB, insertDB } = require("./database");
 const jwt = require("jsonwebtoken");
 
 let db;
 
 const jwtSecret = process.env.JWT_SECRET || "supersecret";
 
-const posts = [
-  {
-    id: 1,
-    title: "Introduction to JavaScript",
-    content:
-      "JavaScript is a dynamic language primarily used for web development...",
-  },
-  {
-    id: 2,
-    title: "Functional Programming",
-    content:
-      "Functional programming is a paradigm where functions take center stage...",
-  },
-  {
-    id: 3,
-    title: "Asynchronous Programming in JS",
-    content:
-      "Asynchronous programming allows operations to run in parallel without blocking the main thread...",
-  },
-];
-
 const initializeAPI = async (app) => {
   db = initializeDatabase();
+
   app.post(
     "/api/login",
     body("username")
@@ -43,6 +24,7 @@ const initializeAPI = async (app) => {
       .escape(),
     login
   );
+
   app.get("/api/posts", getPosts);
 };
 
@@ -52,8 +34,7 @@ const login = async (req, res) => {
   if (!result.isEmpty()) {
     const formattedErrors = [];
     result.array().forEach((error) => {
-      console.log(error);
-      formattedErrors.push({ [error.path]: error.msg });
+      formattedErrors.push({ [error.param]: error.msg });
     });
     return res.status(400).json(formattedErrors);
   }
@@ -69,6 +50,7 @@ const login = async (req, res) => {
       .status(401)
       .json({ username: "Username does not exist. Or Passwort is incorrect." });
   }
+  
   // Check if password is correct
   const hash = user[0].password;
   const match = await bcrypt.compare(password, hash);
@@ -77,6 +59,7 @@ const login = async (req, res) => {
       .status(401)
       .json({ username: "Username does not exist. Or Passwort is incorrect." });
   }
+
   // Create JWT
   const token = jwt.sign(
     {
@@ -89,23 +72,29 @@ const login = async (req, res) => {
   return res.send(token);
 };
 
-const getPosts = (req, res) => {
-  const authorization = req.headers.authorization;
-  if (!authorization) {
-    return res.status(401).json({ error: "No authorization header." });
+const getPostsFromDB = async () => {
+  const getPostsQuery = `
+    SELECT * FROM posts;
+  `;
+  try {
+    const posts = await queryDB(db, getPostsQuery);
+    console.log("Posts from DB:", posts);
+    return posts;
+  } catch (error) {
+    console.error("Error querying posts from DB:", error);
+    throw error;
   }
-  const [prefix, token] = authorization.split(" ");
-  if (prefix !== "Bearer") {
-    return res.status(401).json({ error: "Invalid authorization prefix." });
+};
+
+const getPosts = async (req, res) => {
+  try {
+    const posts = await getPostsFromDB();
+    console.log("Sending posts:", posts);
+    return res.json(posts);
+  } catch (error) {
+    console.error("Error retrieving posts:", error);
+    return res.status(500).json({ error: "Internal server error." });
   }
-  const tokenValidation = jwt.verify(token, jwtSecret);
-  if (!tokenValidation?.data) {
-    return res.status(401).json({ error: "Invalid token." });
-  }
-  if (!tokenValidation.data.roles?.includes("viewer")) {
-    return res.status(403).json({ error: "You are not a viewer." });
-  }
-  return res.send(posts);
 };
 
 module.exports = { initializeAPI };

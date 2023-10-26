@@ -4,12 +4,14 @@ const bcrypt = require("bcrypt");
 const { initializeDatabase, queryDB, insertDB } = require("./database");
 const jwt = require("jsonwebtoken");
 const AesEncryption = require('aes-encryption');
-const crypto = require('crypto'); // Added for key generation
 
 let db;
 
 const jwtSecret = process.env.JWT_SECRET || "supersecret";
-const aesSecret = crypto.createHash('sha256').update(String(process.env.AES_SECRET || "defaultaessecret")).digest('base64').slice(0, 32);
+const aesSecret = process.env.AES_SECRET;
+if (!aesSecret || aesSecret.length !== 64) {
+  throw new Error('AES_SECRET must be a 64 characters long hex string');
+}
 const aes = new AesEncryption();
 aes.setSecretKey(aesSecret);
 console.log('AES Secret Key:', aesSecret);
@@ -83,10 +85,7 @@ const createPost = async (req, res) => {
 
   const { title, content } = req.body;
   try {
-    // Verschlüsseln des Inhalts
     const encryptedContent = aes.encrypt(content);
-    console.log(encryptedContent);
-    // Speichern in der Datenbank
     const insertPostQuery = `INSERT INTO posts (title, content) VALUES (?, ?)`;
     await insertDB(db, insertPostQuery, [title, encryptedContent]);
     res.status(201).json({ message: 'Post created successfully' });

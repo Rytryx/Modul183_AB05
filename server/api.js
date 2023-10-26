@@ -3,10 +3,16 @@ const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
 const { initializeDatabase, queryDB, insertDB } = require("./database");
 const jwt = require("jsonwebtoken");
+const AesEncryption = require('aes-encryption');
+const crypto = require('crypto'); // Added for key generation
 
 let db;
 
 const jwtSecret = process.env.JWT_SECRET || "supersecret";
+const aesSecret = crypto.createHash('sha256').update(String(process.env.AES_SECRET || "defaultaessecret")).digest('base64').slice(0, 32);
+const aes = new AesEncryption();
+aes.setSecretKey(aesSecret);
+console.log('AES Secret Key:', aesSecret);
 
 const initializeAPI = async (app) => {
   db = initializeDatabase();
@@ -76,10 +82,13 @@ const createPost = async (req, res) => {
   }
 
   const { title, content } = req.body;
-  const insertPostQuery = `INSERT INTO posts (title, content) VALUES (?, ?)`;
-
   try {
-    await insertDB(db, insertPostQuery, [title, content]);
+    // Verschlüsseln des Inhalts
+    const encryptedContent = aes.encrypt(content);
+    console.log(encryptedContent);
+    // Speichern in der Datenbank
+    const insertPostQuery = `INSERT INTO posts (title, content) VALUES (?, ?)`;
+    await insertDB(db, insertPostQuery, [title, encryptedContent]);
     res.status(201).json({ message: 'Post created successfully' });
   } catch (error) {
     console.error('Error creating post:', error);
@@ -87,23 +96,38 @@ const createPost = async (req, res) => {
   }
 };
 
-const getPostsFromDB = async () => {
-  const getPostsQuery = `SELECT * FROM posts;`;
+async function queryPostsFromDatabase() {
   try {
+    const getPostsQuery = 'SELECT * FROM posts;';
     const posts = await queryDB(db, getPostsQuery);
-    console.log("Posts from DB:", posts);
     return posts;
   } catch (error) {
-    console.error("Error querying posts from DB:", error);
+    console.error('Error querying posts from database:', error);
     throw error;
   }
-};
+}
+
+async function getPostsFromDB() {
+  try {
+    const posts = await queryPostsFromDatabase();
+    return posts;
+  } catch (error) {
+    console.error('Error querying posts from DB:', error);
+    throw error;
+  }
+}
 
 const getPosts = async (req, res) => {
   try {
     const posts = await getPostsFromDB();
-    console.log("Sending posts:", posts);
-    return res.json(posts);
+    const decryptedPosts = posts.map(post => {
+      return {
+        ...post,
+        title: aes.decrypt(post.title),
+        content: aes.decrypt(post.content)
+      };
+    });
+    return res.json(decryptedPosts);
   } catch (error) {
     console.error("Error retrieving posts:", error);
     return res.status(500).json({ error: "Internal server error." });

@@ -1,3 +1,4 @@
+// database.js
 const sqlite3 = require("sqlite3").verbose();
 const { promisify } = require("util");
 
@@ -16,6 +17,10 @@ const initializeDatabase = () => {
     );
   `;
 
+  const checkIfPostsExistQuery = `
+    SELECT COUNT(*) AS count FROM posts;
+  `;
+
   const insertPostsQuery = `
     INSERT INTO posts (title, content) VALUES
     ('Post 1', 'This is the content of Post 1.'),
@@ -24,11 +29,16 @@ const initializeDatabase = () => {
   `;
 
   dbRun(createPostsTableQuery)
-    .then(() => {
-      console.log("Posts table created or already exists.");
-      return dbRun(insertPostsQuery);
+    .then(async () => {
+      const countResult = await queryDB(db, checkIfPostsExistQuery);
+      const postsExist = countResult[0].count > 0;
+
+      if (!postsExist) {
+        return dbRun(insertPostsQuery);
+      }
     })
-    .then(() => console.log("Initial posts inserted into the table."))
+    .then(() => console.log("Posts table created or already exists."))
+    .then(() => console.log("Initial posts inserted into the table (if needed)."))
     .catch((err) => console.error("Error:", err));
 
   return db;
